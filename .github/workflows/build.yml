@@ -24,17 +24,22 @@ jobs:
           gradle-version: "8.7"
 
       - name: Download Russian speech model
-        run: |
-          mkdir -p app/src/main/assets
-          curl -L -o model.zip https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip
-          unzip -q model.zip
-          mv vosk-model-small-ru-0.22 app/src/main/assets/model-ru
-          echo "luna-ru-1" > app/src/main/assets/model-ru/uuid
+        run: curl -L -o model-ru.zip https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip
 
       - name: Build
         run: gradle assembleDebug
 
-      - name: Publish APK to Releases
+      - name: Check APK
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          ls -l $APK
+          unzip -tq $APK
+          sha256sum $APK
+
+      - name: Publish APK and model to Releases
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "build-${{ github.run_number }}" app/build/outputs/apk/debug/app-debug.apk --title "Luna build ${{ github.run_number }}" --notes "Debug APK"
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          SIZE=$(stat -c%s $APK)
+          gh release create "build-${{ github.run_number }}" $APK model-ru.zip --latest --title "Luna build ${{ github.run_number }}" --notes "APK size: $SIZE bytes"
